@@ -5,7 +5,7 @@ EXEC = gl
 CFLAGS = -O3
 DEBUGFLAGS = -g -O0
 
-SRC = src/main.cpp src/shader.cpp
+SRC = src/main.cpp src/shader.cpp src/stb_image.cpp
 GLAD_SRC = glad/src/gl.c
 GUI_BASE_SRC = gui/src/imgui.cpp gui/src/imgui_impl_glfw.cpp gui/src/imgui_impl_opengl3.cpp gui/src/imgui_draw.cpp gui/src/imgui_widgets.cpp gui/src/imgui_tables.cpp
 GUI_DEMO = gui/src/imgui_demo.cpp

@@ -64,7 +64,7 @@ Shader::Shader(const char* vertexPath, const char* fragmentPath)
     glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
     if (!success)
     {
-        glGetShaderInfoLog(vertex, 512, NULL, infoLog);
+        glGetShaderInfoLog(fragment, 512, NULL, infoLog);
         std::cerr << "Failed to compile fragment shader file: " << fragmentPath << std::endl;
         std::cerr << infoLog << std::endl;
     }
@@ -103,4 +103,9 @@ void Shader::setInt(const std::string& name, int value) const
 void Shader::setFloat(const std::string& name, float value) const
 {
     glUniform1f(glGetUniformLocation(m_id, name.c_str()), value);
+}
+
+unsigned int Shader::ID() const
+{
+    return m_id;
 }
