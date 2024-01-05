@@ -1,6 +1,10 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -101,6 +105,7 @@ int main(int ac, char** av)
     frag.setInt("texture1", 0);
     frag.setInt("texture2", 1);
 
+
     // create wooden container
     int width, height, nrChannels;
     unsigned char* data = stbi_load(TEXPATH"container.jpg", &width, &height, &nrChannels, 0);
@@ -170,6 +175,7 @@ int main(int ac, char** av)
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
     glEnableVertexAttribArray(2);
 
+
     // imgui init
     #ifdef GUI_ON
     IMGUI_CHECKVERSION();
@@ -206,7 +212,21 @@ int main(int ac, char** av)
         glBindTexture(GL_TEXTURE_2D, texture2);
         frag.use();
         frag.setFloat("mixAmt", mixAmt);
+
+        // transformation stuff
+        glm::mat4 trans = glm::mat4(1.0f);
+        trans = glm::translate(trans, glm::vec3(0.5, -0.5, 0.0));
+        trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0, 0.0, 1.0));
+        frag.setFloatMat4("transform", trans);
+
+        glm::mat4 trans1 = glm::mat4(1.0f);
+        float scale = sin(glfwGetTime() * 2.0);
+        trans1 = glm::translate(trans1, glm::vec3(-0.5, 0.5, 0.0));
+        trans1 = glm::scale(trans1, glm::vec3(scale));
+
         glBindVertexArray(VAO);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        frag.setFloatMat4("transform", trans1);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         #ifdef GUI_ON
