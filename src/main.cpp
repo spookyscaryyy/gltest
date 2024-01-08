@@ -10,6 +10,7 @@
 #include "imgui_impl_opengl3.h"
 
 #include "shader.h"
+#include "camera.h"
 #include "stb_image.h"
 
 #include <iostream>
@@ -20,6 +21,7 @@
 
 #define SCR_WIDTH 800
 #define SCR_HEIGHT 600
+#define ASPECT_RATIO (float)SCR_WIDTH/(float)SCR_HEIGHT
 
 #define GL_VERSION_MAJOR 3
 #define GL_VERSION_MINOR 3
@@ -81,14 +83,18 @@ glm::vec3 cubePositions[] = {
     glm::vec3(-1.3f,  1.0f, -1.5f)  
 };
 
-static int indi[] = {
-    0, 1, 3,
-    1, 2, 3
-};
+static float deltaTime = 0.0f;
+static float lastFrame = 0.0f;
 
-static float mixAmt = 0.2;
+static float lastX = SCR_WIDTH / 2;
+static float lastY = SCR_HEIGHT / 2;
+
+static Camera cam(glm::vec3(0.0f, 0.0f, 3.0f));
+static bool firstMouse = true;
 
 void processInput(GLFWwindow* window);
+void mouseCallback(GLFWwindow* window, double xpos, double ypos);
+void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
 void processInput(GLFWwindow* window)
@@ -97,27 +103,51 @@ void processInput(GLFWwindow* window)
     {
         glfwSetWindowShouldClose(window, true);
     }
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
     {
-        mixAmt += 0.05f;
-        if (mixAmt > 1)
-        {
-            mixAmt = 1;
-        }
+        cam.processKeyboard(CamMove::FORWARD, deltaTime);
     }
-    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
     {
-        mixAmt -= 0.05f;
-        if (mixAmt < 0)
-        {
-            mixAmt = 0;
-        }
+        cam.processKeyboard(CamMove::BACKWARD, deltaTime);
+    }
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    {
+        cam.processKeyboard(CamMove::LEFT, deltaTime);
+    }
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    {
+        cam.processKeyboard(CamMove::RIGHT, deltaTime);
     }
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
+}
+
+void mouseCallback(GLFWwindow* window, double xpos, double ypos)
+{
+    if (firstMouse)
+    {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+    
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos;
+
+    lastX = xpos;
+    lastY = ypos;
+
+    cam.processMouseMovement(xoffset, yoffset);
+}
+
+void scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
+{
+    cam.processScroll(static_cast<float>(yoffset));
 }
 
 int main(int ac, char** av)
@@ -136,6 +166,9 @@ int main(int ac, char** av)
         return -1;
     }
     glfwMakeContextCurrent(window);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetCursorPosCallback(window, mouseCallback);
+    glfwSetScrollCallback(window, scrollCallback);
 
     // glad init
     if (!gladLoadGL((GLADloadfunc)glfwGetProcAddress))
@@ -215,14 +248,10 @@ int main(int ac, char** av)
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
 
-    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    //glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indi), indi, GL_STATIC_DRAW);
-
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
-
 
     // imgui init
     #ifdef GUI_ON
@@ -238,6 +267,10 @@ int main(int ac, char** av)
     // Render loop
     while (!glfwWindowShouldClose(window))
     {
+        float currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
         // input
         processInput(window);
         glfwPollEvents();
@@ -260,37 +293,23 @@ int main(int ac, char** av)
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texture2);
         frag.use();
-        frag.setFloat("mixAmt", mixAmt);
 
         // transformation stuff
-        glm::mat4 trans = glm::mat4(1.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(cam.FOV()), ASPECT_RATIO, 0.1f, 100.0f);
+        frag.setFloatMat4("projection", projection);
 
-
-        glm::mat4 view = glm::mat4(1.0f);
-        float xdiff = sin(glfwGetTime() * 2.0f);
-        float ydiff = cos(glfwGetTime() * 2.0f);
-        view = glm::translate(view, glm::vec3(xdiff, ydiff, -3.0 + xdiff));
-
-        glm::mat4 projection = glm::perspective(glm::radians(60.0f), 800.0f/600.0f, 0.1f, 100.0f);
-
+        glm::mat4 view = cam.getViewMatrix();
+        frag.setFloatMat4("view", view);
 
         glBindVertexArray(VAO);
-        //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         for (int i = 0; i < 10; i++)
         {
             // model coords
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, cubePositions[i]);
             float angle = 20.0f * i;
-            if (i % 3 == 0)
-            {
-                angle = glfwGetTime() * 25.0;
-            }
             model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0, 0.3, 0.5));
             frag.setFloatMat4("model", model);
-            frag.setFloatMat4("transform", trans);
-            frag.setFloatMat4("view", view);
-            frag.setFloatMat4("projection", projection);
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
 
