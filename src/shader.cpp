@@ -110,6 +110,11 @@ void Shader::setFloatMat4(const std::string& name, glm::mat4 value) const
     glUniformMatrix4fv(glGetUniformLocation(m_id, name.c_str()), 1, GL_FALSE, glm::value_ptr(value));
 }
 
+void Shader::setFloatVec3(const std::string& name, glm::vec3 value) const
+{
+    glUniform3fv(glGetUniformLocation(m_id, name.c_str()), 1, glm::value_ptr(value));
+}
+
 unsigned int Shader::ID() const
 {
     return m_id;
