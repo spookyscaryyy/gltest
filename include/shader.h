@@ -16,6 +16,7 @@ class Shader
     private:
 
     unsigned int m_id;
+    void checkCompileErrors(unsigned int shader, std::string type);
 
     public:
     Shader(const char* vertexPath, const char* fragmentPath);

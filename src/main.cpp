@@ -5,9 +5,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#ifdef GUI_ON
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#endif /* defined(GUI_ON) */
 
 #include "shader.h"
 #include "camera.h"
@@ -16,8 +18,13 @@
 #include <iostream>
 #include <cmath>
 
+#if defined(_WIN32)
+#define SHADPATH "C:\\Users\\Will\\source\\gltest\\shaders\\"
+#define TEXPATH "C:\\Users\\Will\\source\\gltest\\texture\\"
+#elif defined(linux) /* defined(_WIN32) */
 #define SHADPATH "/home/willbonner/Git_Repos/gltest/shaders/"
 #define TEXPATH "/home/willbonner/Git_Repos/gltest/texture/"
+#endif /* defined(linux) */
 
 #define SCR_WIDTH 800
 #define SCR_HEIGHT 600
@@ -170,8 +177,8 @@ int main(int ac, char** av)
     glEnable(GL_DEPTH_TEST);
 
     // vert shader comp
-    Shader frag(SHADPATH"vertex.glsl", SHADPATH"frag.glsl");
-    Shader light(SHADPATH"lightVert.glsl", SHADPATH"light.glsl");
+    Shader frag(SHADPATH"obj_vertex.glsl", SHADPATH"obj_frag.glsl");
+    Shader light(SHADPATH"light_vertex.glsl", SHADPATH"light_frag.glsl");
 
 
 #if 0
@@ -293,7 +300,7 @@ int main(int ac, char** av)
         model = glm::translate(model, glm::vec3(1.2f, 1.0f, 2.0f));
         model = glm::scale(model, glm::vec3(0.2f));
 
-        light.setFloatMat4("projetion", projection);
+        light.setFloatMat4("projection", projection);
         light.setFloatMat4("view", view);
         light.setFloatMat4("model", model);
 
@@ -312,8 +319,6 @@ int main(int ac, char** av)
 
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
-
-
 
         #ifdef GUI_ON
         ImGui::Render();

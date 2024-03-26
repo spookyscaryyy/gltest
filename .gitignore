@@ -2,3 +2,4 @@ gl
 .vscode/
 imgui/
 imgui.ini
+*.exe
