@@ -298,6 +298,10 @@ int main(int ac, char **av)
         glm::mat4 view = cam.getViewMatrix();
         glm::mat4 model = glm::mat4(1.0f);
 
+        //light_pos.x = 2*cos(currentFrame);
+        //light_pos.y = 2*sin(currentFrame);
+        //light_pos.z = 2*sin(currentFrame);
+
         light.use();
         model = glm::mat4(1.0f);
         model = glm::translate(model, light_pos);
@@ -313,8 +317,7 @@ int main(int ac, char **av)
         frag.use();
         frag.setFloatVec3("object_color", glm::vec3(1.0f, 0.5f, 0.31f));
         frag.setFloatVec3("light_color", glm::vec3(1.0f, 1.0f, 1.0f));
-        frag.setFloatVec3("light_pos", light_pos);
-        frag.setFloatVec3("view_pos", cam.get_pos());
+        frag.setFloatVec3("alight_pos", light_pos);
 
         // transformation stuff
         model = glm::mat4(1.0f);
