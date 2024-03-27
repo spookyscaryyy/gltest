@@ -264,6 +264,8 @@ int main(int ac, char **av)
     ImGui_ImplOpenGL3_Init();
 #endif
 
+    glm::vec3 light_color;
+
     // Render loop
     while (!glfwWindowShouldClose(window))
     {
@@ -298,9 +300,13 @@ int main(int ac, char **av)
         glm::mat4 view = cam.getViewMatrix();
         glm::mat4 model = glm::mat4(1.0f);
 
-        //light_pos.x = 2*cos(currentFrame);
-        //light_pos.y = 2*sin(currentFrame);
-        //light_pos.z = 2*sin(currentFrame);
+        light_pos.x = 2*cos(currentFrame);
+        light_pos.y = 2*sin(currentFrame);
+        light_pos.z = 2*sin(currentFrame);
+
+        light_color.x = sin(currentFrame * 2.0f);
+        light_color.y = sin(currentFrame * 0.7f);
+        light_color.z = sin(currentFrame * 1.3f);
 
         light.use();
         model = glm::mat4(1.0f);
@@ -310,13 +316,19 @@ int main(int ac, char **av)
         light.setFloatMat4("projection", projection);
         light.setFloatMat4("view", view);
         light.setFloatMat4("model", model);
+        light.setFloatVec3("light_color", light_color);
 
         glBindVertexArray(lightVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
         frag.use();
-        frag.setFloatVec3("object_color", glm::vec3(1.0f, 0.5f, 0.31f));
-        frag.setFloatVec3("light_color", glm::vec3(1.0f, 1.0f, 1.0f));
+        frag.setFloatVec3("material.ambient", glm::vec3(1.0f, 0.5f, 0.31f));
+        frag.setFloatVec3("material.diffuse", glm::vec3(1.0f, 0.5f, 0.31f));
+        frag.setFloatVec3("material.specular", glm::vec3(0.5f));
+        frag.setFloat("material.shininess", 32.0f);
+        frag.setFloatVec3("light.ambient", light_color * 0.5f);
+        frag.setFloatVec3("light.diffuse", light_color * 0.2f);
+        frag.setFloatVec3("light.specular", glm::vec3(1.0f));
         frag.setFloatVec3("alight_pos", light_pos);
 
         // transformation stuff
