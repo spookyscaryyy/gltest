@@ -78,6 +78,19 @@ static float verts[] = {
     -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
 };
 
+static glm::vec3 cube_positions[] = {
+    glm::vec3( 0.0f,  0.0f,  0.0f),
+    glm::vec3( 2.0f,  5.0f, -15.0f),
+    glm::vec3(-1.5f, -2.2f, -2.5f),
+    glm::vec3(-3.8f, -2.0f, -12.3f),
+    glm::vec3( 2.4f, -0.4f, -3.5f),
+    glm::vec3(-1.7f,  3.0f, -7.5f),
+    glm::vec3( 1.3f, -2.0f, -2.5f),
+    glm::vec3( 1.5f,  2.0f, -2.5f),
+    glm::vec3( 1.5f,  0.2f, -1.5f),
+    glm::vec3(-1.3f,  1.0f, -1.5f)
+};
+
 static float deltaTime = 0.0f;
 static float lastFrame = 0.0f;
 
@@ -332,16 +345,31 @@ int main(int ac, char **av)
         frag.setFloatVec3("light.ambient", light_color * 0.2f);
         frag.setFloatVec3("light.diffuse", light_color * 0.5f);
         frag.setFloatVec3("light.specular", glm::vec3(1.0f));
-        frag.setFloatVec3("light.position", glm::vec3(view * glm::vec4(light_pos, 1.0f)));
+        //frag.setFloatVec3("light.position", glm::vec3(view * glm::vec4(light_pos, 1.0f)));
+        //frag.setFloatVec3("light.direction", glm::vec3(-0.2f, -1.0f, -0.3f));
+        frag.setFloatVec3("light.position", cam.get_pos());
+        frag.setFloatVec3("light.direction", cam.get_front());
+        frag.setFloat("light.cutoff", glm::cos(glm::radians(12.5f)));
+        frag.setFloat("light.outer_cutoff", glm::cos(glm::radians(17.5f)));
+
+        frag.setFloat("light.consant", 1.0f);
+        frag.setFloat("light.linear", 0.09f);
+        frag.setFloat("light.quadratic", 0.032f);
 
         // transformation stuff
-        model = glm::mat4(1.0f);
-        frag.setFloatMat4("model", model);
         frag.setFloatMat4("view", view);
         frag.setFloatMat4("projection", projection);
 
         glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        for (int i = 0; i < 10; i++)
+        {
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, cube_positions[i]);
+            float angle = 20.0f * i;
+            model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+            frag.setFloatMat4("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
 
 #ifdef GUI_ON
         ImGui::Render();

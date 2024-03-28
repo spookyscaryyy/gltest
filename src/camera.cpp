@@ -24,6 +24,11 @@ glm::vec3 Camera::get_pos()
     return pos;
 }
 
+glm::vec3 Camera::get_front()
+{
+    return front;
+}
+
 float Camera::FOV() const
 {
     return fov;

@@ -43,6 +43,7 @@ class Camera
     void processMouseMovement(float xoffset, float yoffset);
     void processScroll(float yoffset);
     glm::vec3 get_pos();
+    glm::vec3 get_front();
 };
 
 #endif
