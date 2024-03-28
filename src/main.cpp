@@ -332,7 +332,7 @@ int main(int ac, char **av)
         frag.setFloatVec3("light.ambient", light_color * 0.2f);
         frag.setFloatVec3("light.diffuse", light_color * 0.5f);
         frag.setFloatVec3("light.specular", glm::vec3(1.0f));
-        frag.setFloatVec3("alight_pos", light_pos);
+        frag.setFloatVec3("light.position", glm::vec3(view * glm::vec4(light_pos, 1.0f)));
 
         // transformation stuff
         model = glm::mat4(1.0f);
