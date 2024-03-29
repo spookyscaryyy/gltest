@@ -1,8 +1,13 @@
 #version 330 core
+
+#define NR_POINT_LIGHTS 4
+#define NR_DIFFUSE_TEX 10
+#define NR_SPECULAR_TEX 10
+
 struct Material {
     sampler2D emissive;
-    sampler2D diffuse;
-    sampler2D specular;
+    sampler2D tex_diffuse[NR_DIFFUSE_TEX];
+    sampler2D tex_specular[NR_SPECULAR_TEX];
     float shininess;
 };
 
@@ -17,7 +22,6 @@ struct PointLight
     float linear;
     float quadratic;
 };
-#define NR_POINT_LIGHTS 4
 
 struct EnvLight
 {
@@ -42,10 +46,12 @@ struct SpotLight {
     float quadratic;
 };
 
-uniform Material material;
+
 uniform EnvLight sun;
 uniform PointLight point_lights[NR_POINT_LIGHTS];
 uniform SpotLight flashlight;
+uniform Material material;
+
 
 in vec3 normal;
 in vec3 frag_pos;
@@ -109,12 +115,12 @@ void main()
 
     vec3 result = calc_env_light(sun, norm, view_dir);
 
-    for (int i = 0; i < NR_POINT_LIGHTS; i++)
-    {
-        result += calc_point_light(point_lights[i], norm, frag_pos, view_dir);
-    }
+    //for (int i = 0; i < NR_POINT_LIGHTS; i++)
+    //{
+    //    result += calc_point_light(point_lights[i], norm, frag_pos, view_dir);
+    //}
 
-    result += calc_spot_light(flashlight, norm, frag_pos, view_dir);
+    //result += calc_spot_light(flashlight, norm, frag_pos, view_dir);
 
 
     // emissive
