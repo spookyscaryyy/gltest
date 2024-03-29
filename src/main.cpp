@@ -91,6 +91,13 @@ static glm::vec3 cube_positions[] = {
     glm::vec3(-1.3f,  1.0f, -1.5f)
 };
 
+static glm::vec3 point_light_positions[] = {
+	glm::vec3( 0.7f,  0.2f,  2.0f),
+	glm::vec3( 2.3f, -3.3f, -4.0f),
+	glm::vec3(-4.0f,  2.0f, -12.0f),
+	glm::vec3( 0.0f,  0.0f, -3.0f)
+}; 
+
 static float deltaTime = 0.0f;
 static float lastFrame = 0.0f;
 
@@ -196,6 +203,7 @@ unsigned int load_texture(char const* path)
 
     return textureID;
 }
+
 int main(int ac, char **av)
 {
     // glfw init
@@ -271,8 +279,12 @@ int main(int ac, char **av)
     ImGui_ImplOpenGL3_Init();
 #endif
 
-    glm::vec3 light_color = glm::vec3(1.0f);
+    glm::vec3 sun_color = glm::vec3(1.0f);
+    glm::vec3 sun_direction = glm::vec3(-0.2f, -1.0f, -0.3f);
 
+    glm::vec3 point_color = glm::vec3(1.0f);
+
+    glm::vec3 flashlight_color = glm::vec3(1.0f);
     // Render loop
     while (!glfwWindowShouldClose(window))
     {
@@ -307,26 +319,23 @@ int main(int ac, char **av)
         glm::mat4 view = cam.getViewMatrix();
         glm::mat4 model = glm::mat4(1.0f);
 
-        //light_pos.x = 2*cos(currentFrame);
-        //light_pos.y = 2*sin(currentFrame);
-        //light_pos.z = 2*sin(currentFrame);
-
-        //light_color.x = sin(currentFrame * 2.0f);
-        //light_color.y = sin(currentFrame * 0.7f);
-        //light_color.z = sin(currentFrame * 1.3f);
-
         light.use();
-        model = glm::mat4(1.0f);
         model = glm::translate(model, light_pos);
         model = glm::scale(model, glm::vec3(0.2f));
 
         light.setFloatMat4("projection", projection);
         light.setFloatMat4("view", view);
-        light.setFloatMat4("model", model);
-        light.setFloatVec3("light_color", light_color);
+        light.setFloatVec3("light_color", point_color);
 
         glBindVertexArray(lightVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        for (int i = 0; i < 4; i++)
+        {
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, point_light_positions[i]);
+            model = glm::scale(model, glm::vec3(0.2f));
+            light.setFloatMat4("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
 
         frag.use();
         frag.setFloatVec3("material.ambient", glm::vec3(1.0f, 0.5f, 0.31f));
@@ -342,19 +351,38 @@ int main(int ac, char **av)
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, emissive_map);
 
-        frag.setFloatVec3("light.ambient", light_color * 0.2f);
-        frag.setFloatVec3("light.diffuse", light_color * 0.5f);
-        frag.setFloatVec3("light.specular", glm::vec3(1.0f));
-        //frag.setFloatVec3("light.position", glm::vec3(view * glm::vec4(light_pos, 1.0f)));
-        //frag.setFloatVec3("light.direction", glm::vec3(-0.2f, -1.0f, -0.3f));
-        frag.setFloatVec3("light.position", cam.get_pos());
-        frag.setFloatVec3("light.direction", cam.get_front());
-        frag.setFloat("light.cutoff", glm::cos(glm::radians(12.5f)));
-        frag.setFloat("light.outer_cutoff", glm::cos(glm::radians(17.5f)));
+        // sun
+        frag.setFloatVec3("sun.ambient", sun_color * 0.05f);
+        frag.setFloatVec3("sun.diffuse", sun_color * 0.4f);
+        frag.setFloatVec3("sun.specular", sun_color * 0.5f);
+        frag.setFloatVec3("sun.direction", sun_direction);
 
-        frag.setFloat("light.consant", 1.0f);
-        frag.setFloat("light.linear", 0.09f);
-        frag.setFloat("light.quadratic", 0.032f);
+        // flashlight
+        frag.setFloatVec3("flashlight.ambient", flashlight_color * 0.0f);
+        frag.setFloatVec3("flashlight.diffuse", flashlight_color * 0.5f);
+        frag.setFloatVec3("flashlight.specular", glm::vec3(1.0f));
+        frag.setFloatVec3("flashlight.direction", glm::vec3(0.0f, 0.0f, 1.0f));
+        frag.setFloatVec3("flashlight.position", glm::vec3(0.0f));
+        frag.setFloat("flashlight.cutoff", glm::cos(glm::radians(12.5f)));
+        frag.setFloat("flashlight.outer_cutoff", glm::cos(glm::radians(17.5f)));
+        frag.setFloat("flashlight.consant", 1.0f);
+        frag.setFloat("flashlight.linear", 0.09f);
+        frag.setFloat("flashlight.quadratic", 0.032f);
+
+        // point lights
+        for (int i = 0; i < 4; i++)
+        {
+            std::string sel_point_light = "point_lights[";
+            sel_point_light += (char)(i + '0');
+            sel_point_light += "].";
+            frag.setFloatVec3(sel_point_light + "position", point_light_positions[i]);
+            frag.setFloatVec3(sel_point_light + "ambient", point_color * 0.0f);
+            frag.setFloatVec3(sel_point_light + "diffuse", point_color * 0.4f);
+            frag.setFloatVec3(sel_point_light + "specular", glm::vec3(0.5f));
+            frag.setFloat(sel_point_light + "contant", 1.0f);
+            frag.setFloat(sel_point_light + "linear", 0.09f);
+            frag.setFloat(sel_point_light + "quadratic", 0.032f);
+        }
 
         // transformation stuff
         frag.setFloatMat4("view", view);

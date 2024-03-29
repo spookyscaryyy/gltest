@@ -6,7 +6,28 @@ struct Material {
     float shininess;
 };
 
-struct Light {
+struct PointLight
+{
+    vec3 position;
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+
+    float constant;
+    float linear;
+    float quadratic;
+};
+#define NR_POINT_LIGHTS 4
+
+struct EnvLight
+{
+    vec3 direction;
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+};
+
+struct SpotLight {
     vec3 position;
     vec3 direction;
     vec3 ambient;
@@ -22,7 +43,9 @@ struct Light {
 };
 
 uniform Material material;
-uniform Light light;
+uniform EnvLight sun;
+uniform PointLight point_lights[NR_POINT_LIGHTS];
+uniform SpotLight flashlight;
 
 in vec3 normal;
 in vec3 frag_pos;
@@ -30,36 +53,69 @@ in vec2 tex_coords;
 
 out vec4 FragColor;
 
-
-void main()
+vec3 calc_spot_light(SpotLight light, vec3 normal, vec3 pos, vec3 view_dir);
+vec3 calc_spot_light(SpotLight light, vec3 normal, vec3 pos, vec3 view_dir)
 {
-    vec3 result;
-    vec3 light_dir = normalize(-frag_pos);
-
-    // flashlight
-    float theta = dot(light_dir, vec3(0,0,1));
+    float distance = length(light.position - pos);
+    float theta = dot(view_dir, light.direction);
     float epsilon = light.cutoff - light.outer_cutoff;
     float intensity = clamp((theta - light.outer_cutoff) / epsilon, 0.0, 1.0);
 
-    // attenuation
-    float distance = length(frag_pos);
+    float diff = max(dot(normal, view_dir), 0.0);
+    vec3 reflect_dir = reflect(-view_dir, normal);
+    float spec = pow(max(dot(view_dir, reflect_dir), 0.0), material.shininess);
+
+    vec3 ambient = light.ambient * vec3(texture(material.diffuse, tex_coords));
+    vec3 diffuse = light.diffuse * (diff * vec3(texture(material.diffuse, tex_coords)));
+    vec3 specular = light.specular * (spec * vec3(texture(material.specular, tex_coords)));
+    float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * distance * distance);
+    return (attenuation * (ambient + intensity * (diffuse + specular)));
+
+}
+vec3 calc_point_light(PointLight light, vec3 normal, vec3 pos, vec3 view_dir); 
+vec3 calc_point_light(PointLight light, vec3 normal, vec3 pos, vec3 view_dir)
+{
+    float distance = length(light.position - pos);
+    float diff = max(dot(normal, view_dir), 0.0);
+    vec3 reflect_dir = reflect(-view_dir, normal);
+    float spec = pow(max(dot(view_dir, reflect_dir), 0.0), material.shininess);
+
+    vec3 ambient = light.ambient * vec3(texture(material.diffuse, tex_coords));
+    vec3 diffuse = light.diffuse * (diff * vec3(texture(material.diffuse, tex_coords)));
+    vec3 specular = light.specular * (spec * vec3(texture(material.specular, tex_coords)));
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * distance * distance);
 
-    // ambient
-    vec3 ambient = light.ambient * vec3(texture(material.diffuse, tex_coords));
+    return (attenuation * (ambient + diffuse + specular));
+}
 
-    // diffuse
-    vec3 norm = normalize(normal);
-    //vec3 light_dir = normalize(-light.direction);
-    float diff = max(dot(norm, light_dir), 0.0);
-    vec3 diffuse = light.diffuse * (diff * vec3(texture(material.diffuse, tex_coords)));
-
-    // specular
-    vec3 view_dir = normalize(-frag_pos);
-    vec3 reflect_dir = reflect(-light_dir, norm);
+vec3 calc_env_light(EnvLight light, vec3 normal, vec3 view_dir);
+vec3 calc_env_light(EnvLight light, vec3 normal, vec3 view_dir)
+{
+    vec3 light_dir = normalize(-light.direction);
+    float diff = max(dot(normal, light_dir), 0.0);
+    vec3 reflect_dir = reflect(-light_dir, normal);
     float spec = pow(max(dot(view_dir, reflect_dir), 0.0), material.shininess);
+
+    vec3 ambient = light.ambient * vec3(texture(material.diffuse, tex_coords));
+    vec3 diffuse = light.diffuse * (diff * vec3(texture(material.diffuse, tex_coords)));
     vec3 specular = light.specular * (spec * vec3(texture(material.specular, tex_coords)));
-    result = attenuation * (ambient + intensity * (diffuse + specular));
+    return (ambient + diffuse + specular);
+}
+
+void main()
+{
+    vec3 norm = normalize(normal);
+    vec3 view_dir = normalize(-frag_pos);
+
+    vec3 result = calc_env_light(sun, norm, view_dir);
+
+    for (int i = 0; i < NR_POINT_LIGHTS; i++)
+    {
+        result += calc_point_light(point_lights[i], norm, frag_pos, view_dir);
+    }
+
+    result += calc_spot_light(flashlight, norm, frag_pos, view_dir);
+
 
     // emissive
     vec3 emissive = vec3(0.0);
