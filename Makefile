@@ -1,11 +1,11 @@
-LIBS = -lGL -lglfw3
+LIBS = -lGL -lglfw3 -lassimp
 INC = -Igui/include -Iinclude
 CC = g++
 EXEC = gl
 CFLAGS = -O3
 DEBUGFLAGS = -g -O0
 
-SRC = src/main.cpp src/shader.cpp src/stb_image.cpp src/camera.cpp src/gl.c
+SRC = src/main.cpp src/shader.cpp src/stb_image.cpp src/camera.cpp src/gl.c src/mesh.cpp src/model.cpp
 GUI_BASE_SRC = gui/src/imgui.cpp gui/src/imgui_impl_glfw.cpp gui/src/imgui_impl_opengl3.cpp gui/src/imgui_draw.cpp gui/src/imgui_widgets.cpp gui/src/imgui_tables.cpp
 GUI_DEMO = gui/src/imgui_demo.cpp
 

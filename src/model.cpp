@@ -1,6 +1,11 @@
 #include "model.h"
 #include "config.h"
 
+Model::Model(const char* path)
+{
+    load_model(path);
+}
+
 void Model::draw(Shader &shader)
 {
     for (int i = 0; i < meshes.size(); i++)
@@ -90,7 +95,6 @@ Mesh Model::process_mesh(aiMesh* mesh, const aiScene* scene)
     return Mesh(vertices, indices, textures);
 }
 
-
 std::vector<Texture> Model::load_material_textures(aiMaterial* mat, aiTextureType type)
 {
     std::vector<Texture> textures;
@@ -117,6 +121,7 @@ std::vector<Texture> Model::load_material_textures(aiMaterial* mat, aiTextureTyp
             textures.push_back(texture);
         }
     }
+    return textures;
 }
 
 unsigned int Model::texture_from_file(const char *path, std::string dir)

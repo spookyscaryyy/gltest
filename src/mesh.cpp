@@ -12,8 +12,8 @@ Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std:
     
 void Mesh::draw(Shader &shader)
 {
-    unsigned int diffuse_count = 1;
-    unsigned int specular_count = 1;
+    unsigned int diffuse_count = 0;
+    unsigned int specular_count = 0;
     for (unsigned int i = 0; i < textures.size(); i++)
     {
         glActiveTexture(GL_TEXTURE0 + i);
@@ -32,11 +32,10 @@ void Mesh::draw(Shader &shader)
         shader.setInt(("material.tex_" + tex_string).c_str(), i);
         glBindTexture(GL_TEXTURE_2D, textures[i].id);
     }
-    glActiveTexture(GL_TEXTURE0);
-
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
+    glActiveTexture(GL_TEXTURE0);
 }
 
 void Mesh::setup_mesh()

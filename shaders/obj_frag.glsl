@@ -5,7 +5,6 @@
 #define NR_SPECULAR_TEX 10
 
 struct Material {
-    sampler2D emissive;
     sampler2D tex_diffuse[NR_DIFFUSE_TEX];
     sampler2D tex_specular[NR_SPECULAR_TEX];
     float shininess;
@@ -58,7 +57,7 @@ in vec3 frag_pos;
 in vec2 tex_coords;
 
 out vec4 FragColor;
-
+/*
 vec3 calc_spot_light(SpotLight light, vec3 normal, vec3 pos, vec3 view_dir);
 vec3 calc_spot_light(SpotLight light, vec3 normal, vec3 pos, vec3 view_dir)
 {
@@ -107,13 +106,13 @@ vec3 calc_env_light(EnvLight light, vec3 normal, vec3 view_dir)
     vec3 specular = light.specular * (spec * vec3(texture(material.specular, tex_coords)));
     return (ambient + diffuse + specular);
 }
-
+*/
 void main()
 {
     vec3 norm = normalize(normal);
     vec3 view_dir = normalize(-frag_pos);
 
-    vec3 result = calc_env_light(sun, norm, view_dir);
+    //vec3 result = calc_env_light(sun, norm, view_dir);
 
     //for (int i = 0; i < NR_POINT_LIGHTS; i++)
     //{
@@ -122,14 +121,6 @@ void main()
 
     //result += calc_spot_light(flashlight, norm, frag_pos, view_dir);
 
-
-    // emissive
-    vec3 emissive = vec3(0.0);
-    if (texture(material.specular, tex_coords).rgb == vec3(0.0))
-    {
-        emissive = vec3(texture(material.emissive, tex_coords));
-    }
-
-    result += emissive;
-    FragColor = vec4(result, 1.0);
+    FragColor = texture(material.tex_diffuse[0], tex_coords);
+    //FragColor = vec4(result, 1.0);
 }
