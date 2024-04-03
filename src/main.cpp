@@ -17,6 +17,8 @@
 
 #include <iostream>
 #include <cmath>
+#include <vector>
+#include <map>
 
 #if defined(_WIN32)
 #define SHADPATH "C:\\Users\\Will\\source\\gltest\\shaders\\"
@@ -87,6 +89,17 @@ static float plane_verts[] = {
     5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
    -5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
     5.0f, -0.5f, -5.0f,  2.0f, 2.0f								
+    };
+
+static float transparent_vertices[] = {
+        // positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
+        0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+        0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
+        1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+
+        0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+        1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+        1.0f,  0.5f,  0.0f,  1.0f,  0.0f
     };
 
 static float deltaTime = 0.0f;
@@ -163,24 +176,33 @@ unsigned int load_texture(char const* path)
     unsigned int textureID;
     glGenTextures(1, &textureID);
     
-    int width, height, nrComponents;
+    int width, height, nrComponents, method;
     unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
     if (data)
     {
         GLenum format;
         if (nrComponents == 1)
+        {
             format = GL_RED;
+            method = GL_REPEAT;
+        }
         else if (nrComponents == 3)
+        {
             format = GL_RGB;
+            method = GL_REPEAT;
+        }
         else if (nrComponents == 4)
+        {
             format = GL_RGBA;
+            method = GL_CLAMP_TO_EDGE;
+        }
 
         glBindTexture(GL_TEXTURE_2D, textureID);
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, method);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, method);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -227,9 +249,16 @@ int main(int ac, char **av)
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
-    glEnable(GL_STENCIL_TEST);
-    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    std::vector<glm::vec3> windows;
+    windows.push_back(glm::vec3(-1.5f,  0.0f, -0.48f));
+    windows.push_back(glm::vec3( 1.5f,  0.0f,  0.51f));
+    windows.push_back(glm::vec3( 0.0f,  0.0f,  0.7f));
+    windows.push_back(glm::vec3(-0.3f,  0.0f, -2.3f));
+    windows.push_back(glm::vec3( 0.5f,  0.0f, -0.6f)); 
 
     // vert shader comp
     Shader frag(SHADPATH "obj_vertex.glsl", SHADPATH "obj_frag.glsl");
@@ -238,6 +267,7 @@ int main(int ac, char **av)
     // create wooden container
     unsigned int cube_tex = load_texture(TEXPATH"marble.jpg");
     unsigned int floor_tex = load_texture(TEXPATH"metal.png");
+    unsigned int window_tex = load_texture(TEXPATH"window.png");
 
     // cube VAO
     unsigned int cubeVAO, cubeVBO;
@@ -262,7 +292,19 @@ int main(int ac, char **av)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-    glBindVertexArray(0);    
+    glBindVertexArray(0);
+    // transparent VAO
+    unsigned int transparentVAO, transparentVBO;
+    glGenVertexArrays(1, &transparentVAO);
+    glGenBuffers(1, &transparentVBO);
+    glBindVertexArray(transparentVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, transparentVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(transparent_vertices), transparent_vertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glBindVertexArray(0); 
 
 // imgui init
 #ifdef GUI_ON
@@ -317,15 +359,11 @@ int main(int ac, char **av)
         frag.setFloatMat4("projection", projection);
 
         // floor
-        glStencilMask(0x00);
         glBindVertexArray(planeVAO);
         glBindTexture(GL_TEXTURE_2D, floor_tex);
         frag.setFloatMat4("model", glm::mat4(1.0f));
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glBindVertexArray(0);
-
-        glStencilFunc(GL_ALWAYS, 1, 0xFF);
-        glStencilMask(0xFF);
 
         // cubes
         glBindVertexArray(cubeVAO);
@@ -340,31 +378,22 @@ int main(int ac, char **av)
         frag.setFloatMat4("model", model);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
-        // cube outlines
-        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-        glStencilMask(0x00);
-        glDisable(GL_DEPTH_TEST);
-        outline.use();
-        outline.setFloatMat4("projection", projection);
-        outline.setFloatMat4("view", view);
-        glBindVertexArray(cubeVAO);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, cube_tex); 	
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
-        model = glm::scale(model, glm::vec3(1.1));
-        outline.setFloatMat4("model", model);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
-        model = glm::scale(model, glm::vec3(1.1));
-        outline.setFloatMat4("model", model);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        glBindVertexArray(0);
-        glStencilMask(0xFF);
-        glStencilFunc(GL_ALWAYS, 0, 0xFF);
-        glEnable(GL_DEPTH_TEST);
+        // windows
+        glBindVertexArray(transparentVAO);
+        glBindTexture(GL_TEXTURE_2D, window_tex);
+        std::map<float, glm::vec3> sorted;
+        for (int i = 0; i < windows.size(); i++)
+        {
+            float distance = glm::length(cam.get_pos() - windows[i]);
+            sorted[distance] = windows[i];
+        }
+        for (auto it = sorted.rbegin(); it != sorted.rend(); it++)
+        {
+            model = glm::mat4(1.0);
+            model = glm::translate(model, it->second);
+            frag.setFloatMat4("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+        }
 
 
 
