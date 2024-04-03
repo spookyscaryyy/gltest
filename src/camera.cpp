@@ -19,14 +19,24 @@ glm::mat4 Camera::getViewMatrix()
     return glm::lookAt(pos, pos + front, up);
 }
 
-glm::vec3 Camera::get_pos()
+glm::vec3 Camera::get_pos() const
 {
     return pos;
 }
 
-glm::vec3 Camera::get_front()
+glm::vec3 Camera::get_front() const
 {
     return front;
+}
+
+void Camera::set_yaw(float yaw)
+{
+    this->yaw = yaw;
+}
+
+float Camera::get_yaw() const
+{
+    return yaw;
 }
 
 float Camera::FOV() const
@@ -55,7 +65,7 @@ void Camera::processKeyboard(CamMove direction, float deltaTime)
     }
 }
 
-void Camera::processMouseMovement(float xoffset, float yoffset)
+void Camera::processMouseMovement(float xoffset, float yoffset, bool restrict_pitch)
 {
     const float sens = 0.1;
     xoffset *= sens;
@@ -64,11 +74,11 @@ void Camera::processMouseMovement(float xoffset, float yoffset)
     yaw += xoffset;
     pitch += yoffset;
 
-    if (pitch > 89.9)
+    if (pitch > 89.9 && restrict_pitch)
     {
         pitch = 89.9;
     }
-    if (pitch < -89.9)
+    if (pitch < -89.9 && restrict_pitch)
     {
         pitch = -89.9;
     }

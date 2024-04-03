@@ -40,10 +40,12 @@ class Camera
     glm::mat4 getViewMatrix();
     float FOV() const;
     void processKeyboard(CamMove direction, float deltaTime);
-    void processMouseMovement(float xoffset, float yoffset);
+    void processMouseMovement(float xoffset, float yoffset, bool restrict_pitch = true);
     void processScroll(float yoffset);
-    glm::vec3 get_pos();
-    glm::vec3 get_front();
+    glm::vec3 get_pos() const;
+    glm::vec3 get_front() const;
+    void set_yaw(float yaw);
+    float get_yaw() const;
 };
 
 #endif

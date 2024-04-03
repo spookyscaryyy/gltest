@@ -105,13 +105,14 @@ static float transparent_vertices[] = {
 static float screen_vertices[] = {
         // positions   // texCoords
         -1.0f,  1.0f,  0.0f, 1.0f,
-        -1.0f, -1.0f,  0.0f, 0.0f,
-         1.0f, -1.0f,  1.0f, 0.0f,
+        -1.0f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f,  1.0f, 0.0f,
 
         -1.0f,  1.0f,  0.0f, 1.0f,
-         1.0f, -1.0f,  1.0f, 0.0f,
-         1.0f,  1.0f,  1.0f, 1.0f
+        -0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  1.0f,  1.0f, 1.0f
     };
+
 static float deltaTime = 0.0f;
 static float lastFrame = 0.0f;
 
@@ -361,15 +362,18 @@ int main(int ac, char **av)
         ImGui::ShowDemoWindow();
 #endif
 
-        // rendering
+        // rear view mirror
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
+        cam.set_yaw(cam.get_yaw() + 180.0f);
+        cam.processMouseMovement(0, 0, false);
 
         glm::mat4 projection = glm::perspective(glm::radians(cam.FOV()), ASPECT_RATIO, 0.1f, 100.0f);
         glm::mat4 view = cam.getViewMatrix();
         glm::mat4 model = glm::mat4(1.0f);
+
+        cam.set_yaw(cam.get_yaw() - 180.0f);
+        cam.processMouseMovement(0, 0, true);
 
         frag.use();
         frag.setInt("texture1", 0);
@@ -396,20 +400,45 @@ int main(int ac, char **av)
         frag.setFloatMat4("model", model);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
+        // switch to normal view
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glDisable(GL_DEPTH_TEST);
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 
+        view = cam.getViewMatrix();
+        model = glm::mat4(1.0f);
+
+        frag.use();
+        frag.setInt("texture1", 0);
+        frag.setFloatMat4("view", view);
+
+        // floor
+        glBindVertexArray(planeVAO);
+        glBindTexture(GL_TEXTURE_2D, floor_tex);
+        frag.setFloatMat4("model", glm::mat4(1.0f));
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindVertexArray(0);
+
+        // cubes
+        glBindVertexArray(cubeVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, cube_tex); 	
+        model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
+        frag.setFloatMat4("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+        frag.setFloatMat4("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        // draw the rear view mirror
+        glDisable(GL_DEPTH_TEST);
         screen.use();
         screen.setInt("screen_tex", 0);
         glBindVertexArray(screenVAO);
         glBindTexture(GL_TEXTURE_2D, texture);
         glDrawArrays(GL_TRIANGLES, 0, 6);
-
-
-        // transformation stuff
-
 
 #ifdef GUI_ON
         ImGui::Render();
