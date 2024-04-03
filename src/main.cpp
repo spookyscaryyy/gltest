@@ -260,13 +260,6 @@ int main(int ac, char **av)
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
-    glFrontFace(GL_CW);
-
     // vert shader comp
     Shader frag(SHADPATH "obj_vertex.glsl", SHADPATH "obj_frag.glsl");
     Shader screen(SHADPATH"fbo_vertex.glsl", SHADPATH"fbo_frag.glsl");
