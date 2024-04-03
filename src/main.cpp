@@ -28,8 +28,8 @@
 #define TEXPATH "/home/willbonner/Git_Repos/gltest/texture/"
 #endif /* defined(__unix__) */
 
-#define SCR_WIDTH 800
-#define SCR_HEIGHT 600
+#define SCR_WIDTH 1600
+#define SCR_HEIGHT 1200
 #define ASPECT_RATIO (float)SCR_WIDTH/(float)SCR_HEIGHT
 
 #define GL_VERSION_MAJOR 3
@@ -102,6 +102,16 @@ static float transparent_vertices[] = {
         1.0f,  0.5f,  0.0f,  1.0f,  0.0f
     };
 
+static float screen_vertices[] = {
+        // positions   // texCoords
+        -1.0f,  1.0f,  0.0f, 1.0f,
+        -1.0f, -1.0f,  0.0f, 0.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+
+        -1.0f,  1.0f,  0.0f, 1.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+         1.0f,  1.0f,  1.0f, 1.0f
+    };
 static float deltaTime = 0.0f;
 static float lastFrame = 0.0f;
 
@@ -257,22 +267,14 @@ int main(int ac, char **av)
     glCullFace(GL_BACK);
     glFrontFace(GL_CW);
 
-
-    std::vector<glm::vec3> windows;
-    windows.push_back(glm::vec3(-1.5f,  0.0f, -0.48f));
-    windows.push_back(glm::vec3( 1.5f,  0.0f,  0.51f));
-    windows.push_back(glm::vec3( 0.0f,  0.0f,  0.7f));
-    windows.push_back(glm::vec3(-0.3f,  0.0f, -2.3f));
-    windows.push_back(glm::vec3( 0.5f,  0.0f, -0.6f)); 
-
     // vert shader comp
     Shader frag(SHADPATH "obj_vertex.glsl", SHADPATH "obj_frag.glsl");
-    Shader outline(SHADPATH "obj_vertex.glsl", SHADPATH"outline_frag.glsl");
+    Shader screen(SHADPATH"fbo_vertex.glsl", SHADPATH"fbo_frag.glsl");
+
 
     // create wooden container
-    unsigned int cube_tex = load_texture(TEXPATH"marble.jpg");
+    unsigned int cube_tex = load_texture(TEXPATH"container.jpg");
     unsigned int floor_tex = load_texture(TEXPATH"metal.png");
-    unsigned int window_tex = load_texture(TEXPATH"window.png");
 
     // cube VAO
     unsigned int cubeVAO, cubeVBO;
@@ -298,18 +300,43 @@ int main(int ac, char **av)
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glBindVertexArray(0);
-    // transparent VAO
-    unsigned int transparentVAO, transparentVBO;
-    glGenVertexArrays(1, &transparentVAO);
-    glGenBuffers(1, &transparentVBO);
-    glBindVertexArray(transparentVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, transparentVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(transparent_vertices), transparent_vertices, GL_STATIC_DRAW);
+
+    // screen VAO
+    unsigned int screenVAO, screenVBO;
+    glGenVertexArrays(1, &screenVAO);
+    glGenBuffers(1, &screenVAO);
+    glBindVertexArray(screenVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, screenVAO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(screen_vertices), screen_vertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
     glBindVertexArray(0); 
+
+    unsigned int fbo;
+    glGenFramebuffers(1, &fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+    unsigned int texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); 
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+
+    unsigned int rbo;
+    glGenRenderbuffers(1, &rbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    {
+        std::cout << "Frame buffer not complete\n";
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 // imgui init
 #ifdef GUI_ON
@@ -321,10 +348,7 @@ int main(int ac, char **av)
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init();
 #endif
-
-    frag.use();
-    frag.setInt("texture1", 0);
-
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     // Render loop
     while (!glfwWindowShouldClose(window))
     {
@@ -345,21 +369,17 @@ int main(int ac, char **av)
 #endif
 
         // rendering
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-#if 0
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture1);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, texture2);
-#endif
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
 
         glm::mat4 projection = glm::perspective(glm::radians(cam.FOV()), ASPECT_RATIO, 0.1f, 100.0f);
         glm::mat4 view = cam.getViewMatrix();
         glm::mat4 model = glm::mat4(1.0f);
 
         frag.use();
+        frag.setInt("texture1", 0);
         frag.setFloatMat4("view", view);
         frag.setFloatMat4("projection", projection);
 
@@ -383,23 +403,16 @@ int main(int ac, char **av)
         frag.setFloatMat4("model", model);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
-        // windows
-        glBindVertexArray(transparentVAO);
-        glBindTexture(GL_TEXTURE_2D, window_tex);
-        std::map<float, glm::vec3> sorted;
-        for (int i = 0; i < windows.size(); i++)
-        {
-            float distance = glm::length(cam.get_pos() - windows[i]);
-            sorted[distance] = windows[i];
-        }
-        for (auto it = sorted.rbegin(); it != sorted.rend(); it++)
-        {
-            model = glm::mat4(1.0);
-            model = glm::translate(model, it->second);
-            frag.setFloatMat4("model", model);
-            glDrawArrays(GL_TRIANGLES, 0, 6);
-        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDisable(GL_DEPTH_TEST);
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
 
+        screen.use();
+        screen.setInt("screen_tex", 0);
+        glBindVertexArray(screenVAO);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
 
 
         // transformation stuff
