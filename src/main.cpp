@@ -312,13 +312,13 @@ int main(int ac, char **av)
     glGenFramebuffers(1, &fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
-    unsigned int texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
+    unsigned int mirror;
+    glGenTextures(1, &mirror);
+    glBindTexture(GL_TEXTURE_2D, mirror);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); 
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, mirror, 0);
 
     unsigned int rbo;
     glGenRenderbuffers(1, &rbo);
@@ -365,16 +365,16 @@ int main(int ac, char **av)
         // rear view mirror
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
         glEnable(GL_DEPTH_TEST);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glm::mat4 projection = glm::perspective(glm::radians(cam.FOV()), ASPECT_RATIO, 0.1f, 100.0f);
         cam.set_yaw(cam.get_yaw() + 180.0f);
         cam.processMouseMovement(0, 0, false);
-
-        glm::mat4 projection = glm::perspective(glm::radians(cam.FOV()), ASPECT_RATIO, 0.1f, 100.0f);
         glm::mat4 view = cam.getViewMatrix();
-        glm::mat4 model = glm::mat4(1.0f);
-
         cam.set_yaw(cam.get_yaw() - 180.0f);
         cam.processMouseMovement(0, 0, true);
 
+        glm::mat4 model = glm::mat4(1.0f);
         frag.use();
         frag.setInt("texture1", 0);
         frag.setFloatMat4("view", view);
@@ -437,7 +437,7 @@ int main(int ac, char **av)
         screen.use();
         screen.setInt("screen_tex", 0);
         glBindVertexArray(screenVAO);
-        glBindTexture(GL_TEXTURE_2D, texture);
+        glBindTexture(GL_TEXTURE_2D, mirror);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
 #ifdef GUI_ON
